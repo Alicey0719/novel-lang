@@ -1,0 +1,10 @@
+version: "3"
+
+services:
+  ruby3-dev:
+    image: ruby:3.1.2
+    container_name: ruby3-dev
+    volumes:
+      - "./:/opt/data/"
+    working_dir: /opt/data/
+    tty: true
