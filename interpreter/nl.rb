@@ -5,16 +5,13 @@ class NovelLangSyntaxError < StandardError
 end
 
 class NovelLang
-    @@KEYWORDS = {
+    @@KEYS = {
         "+" => :add,
         "-" => :sub,
         "*" => :mul,
         "/" => :div,
-        "(" => :parn_l,
-        ")" => :parn_r,
-    }
-
-    @@KEYS = {
+        "(" => :parn_L,
+        ")" => :parn_R,
         "🤔" => :if,
         "🕑" => :loop,
         "⛄" => :calc,
@@ -23,8 +20,8 @@ class NovelLang
         "」" => :std_out_R,
         "【" => :var_L,
         "】" => :var_R,
-        "（" => :ins_L,
-        "）" => :ins_R,
+        "（" => :assignment_L,
+        "）" => :assignment_R,
         "……" => :section,
         ">" => :greater_than,
         "<" => :less_than,
@@ -49,7 +46,8 @@ class NovelLang
 
         # running
         code = read_file(ARGV[0])
-        p run(code)
+        run(code)
+        p @nl_var_hash if @debug
     end
 
     private def run(text)
@@ -61,17 +59,33 @@ class NovelLang
             text = STDIN.gets
         end
 
-        text = text.gsub(/[^\d\+\-\*\/\(\)]/, "") #数字と演算子以外の文字削除わよ
+        # text = text.gsub(/[^\d\+\-\*\/\(\)]/, "") #数字と演算子以外の文字削除わよ
+        text = text.gsub(/[\r\n]/, "")
         p text if @debug
 
         @sc = StringScanner.new(text)
-        ans = eval(parse())
-        ans = "%.15g" % ans #表示の整形わよ
+
+        while true
+            break if @sc.eos?
+            eval(parse())
+        end
+        #ans = "%.15g" % ans #表示の整形わよ
         # print "#{ans}\n"
-        return ans
+        return
     end
 
     ## 意味解析
+    # private def sentences()
+    #     unless s = sentence()
+    #         raise Exception, "あるべき文が見つからない"
+    #     end
+    #     result = [:block, s]
+    #     while s = sentence()
+    #         result << s
+    #     end
+    #     return result
+    # end
+
     private def eval(exp)
         if exp.instance_of?(Array)
             case exp[0]
@@ -84,6 +98,12 @@ class NovelLang
             when :div
                 raise NovelLangSyntaxError, "Division by zero error" if exp[2] == 0 #ゼロ除算エラーわよ
                 return eval(exp[1]) / eval(exp[2])
+            when :assignment_L
+                return @nl_var_hash[exp[1]] = eval(exp[2])
+            when :var
+                return @nl_var_hash[exp[2]]
+            when :std_out_L
+                print "#{eval(exp[1])}\n"
             end
         else
             return exp
@@ -94,13 +114,14 @@ class NovelLang
     private def expression()
         result = term()
         token = get_token()
-        while token == :add or token == :sub
+        while token == :add or token == :sub or token == :assignment_L or token == :std_out_L
             result = [token, result, term()]
             token = get_token()
         end
         #unget_token(token)
-        unget_token()
-        p result if @debug
+        unget_token() unless token == :assignment_R or token == :std_out_R
+
+        p "exp : #{result}" if @debug
         return result
     end
 
@@ -114,7 +135,7 @@ class NovelLang
         end
         #unget_token(token)
         unget_token()
-        p result if @debug
+        p "term: #{result}" if @debug
         return result
     end
 
@@ -122,16 +143,32 @@ class NovelLang
     private def factor()
         token = get_token()
         if token =~ /\d+/ #トークンがリテラルか
-            result = token.to_f() #リテラル
-        elsif token == :parn_l
+            result = token.to_f() #リテラル        
+        elsif token == :parn_L
             result = expression()
-            if get_token() != :parn_r then # 閉じカッコを取り除く（使用しない）
+            if get_token() != :parn_R # 閉じカッコを取り除く
                 raise NovelLangSyntaxError, "SyntaxError ')'がありません"
             end
+        elsif token == :var_L #変数関係
+            var = get_token()
+            if var =~ /#{@@KEYS_RE}/
+                raise NovelLangSyntaxError, "SyntaxError 変数名が正しく規定されていません"
+            end
+
+            result = [:var, var]
+
+            if get_token() != :var_R # 閉じカッコを取り除く
+                raise NovelLangSyntaxError, "SyntaxError '】'がありません"
+            end
+        # elsif token == :std_out_L
+        #     result = [:std_out_L, expression()]
+        #     if get_token() != :std_out_R # 閉じカッコを取り除く
+        #         raise NovelLangSyntaxError, "SyntaxError '」'がありません"
+        #     end       
         else
-            raise NovelLangSyntaxError, "Syntax error"
+            raise NovelLangSyntaxError, "Syntax error '#{token}'"
         end
-        p result if @debug
+        p "fact: #{result}" if @debug
         return result
     end
 
@@ -142,29 +179,29 @@ class NovelLang
     #-- util --
     # token操作
     private def get_token()
-        if @sc.scan(/\d+|[\+\-\*\/\(\)]/) #数字or演算子
-            if @sc[0] =~ /[\+\-\*\/\(\)]/ #符号
-                return @@KEYWORDS[@sc[0]]
+        if @sc.scan(/#{@@TOKEN_RE}/) #token?
+            @before_scan = @sc[0] #eos時のunscan用
+            if @sc[0] =~ /#{@@KEYS_RE}|#{@@CALC_RE}/
+                p @@KEYS[@sc[0]]
+                return @@KEYS[@sc[0]]
+            elsif @sc[0] =~ /#{@@RETURN_RE}/
+                print "return\n\n" if @debug
             else
+                p @sc[0]
                 return @sc[0]
             end
         end
     end
 
-    # private def get_token()
-    #     if @sc.scan(@@TOKEN_RE) #対応する文字
-    #         if @sc[0] =~ /#{@@KEYS_RE}/
-    #             return @@KEYS_RE[@sc[0]]
-    #         elsif @sc[0] =~ /#{@@RETURN_RE}/
-    #             return :return
-    #         else
-    #             return @sc[0]
-    #         end
-    #     end
-    # end
-
     private def unget_token()
-        @sc.unscan() unless @sc.eos?
+        unless @sc.eos?
+            @sc.unscan()
+        else
+            raise NovelLangSyntaxError, 'SyntaxError: fail token unget' if @before_scan.nil?
+            @sc.string = @before_scan
+            #p @sc
+        end
+        p 'unget_token' if @debug
     end
 
     # read file2txt
