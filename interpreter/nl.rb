@@ -72,7 +72,7 @@ class NovelLang
     end
 
     ## 意味解析
-    def eval(exp)
+    private def eval(exp)
         if exp.instance_of?(Array)
             case exp[0]
             when :add
@@ -91,7 +91,7 @@ class NovelLang
     end
 
     ## Exp
-    def expression()
+    private def expression()
         result = term()
         token = get_token()
         while token == :add or token == :sub
@@ -105,7 +105,7 @@ class NovelLang
     end
 
     ## Term
-    def term()
+    private def term()
         result = factor()
         token = get_token()
         while token == :mul or token == :div
@@ -119,13 +119,15 @@ class NovelLang
     end
 
     ## Fact
-    def factor()
+    private def factor()
         token = get_token()
         if token =~ /\d+/ #トークンがリテラルか
             result = token.to_f() #リテラル
         elsif token == :parn_l
             result = expression()
-            get_token() # 閉じカッコを取り除く（使用しない）
+            if get_token() != :parn_r then # 閉じカッコを取り除く（使用しない）
+                raise NovelLangSyntaxError, "SyntaxError ')'がありません"
+            end
         else
             raise NovelLangSyntaxError, "Syntax error"
         end
@@ -133,13 +135,13 @@ class NovelLang
         return result
     end
 
-    def parse()
+    private def parse()
         expression()
     end
 
     #-- util --
     # token操作
-    def get_token()
+    private def get_token()
         if @sc.scan(/\d+|[\+\-\*\/\(\)]/) #数字or演算子
             if @sc[0] =~ /[\+\-\*\/\(\)]/ #符号
                 return @@KEYWORDS[@sc[0]]
@@ -149,7 +151,7 @@ class NovelLang
         end
     end
 
-    # def get_token()
+    # private def get_token()
     #     if @sc.scan(@@TOKEN_RE) #対応する文字
     #         if @sc[0] =~ /#{@@KEYS_RE}/
     #             return @@KEYS_RE[@sc[0]]
@@ -161,7 +163,7 @@ class NovelLang
     #     end
     # end
 
-    def unget_token()
+    private def unget_token()
         @sc.unscan() unless @sc.eos?
     end
 
