@@ -4,7 +4,15 @@ services:
   ruby3-dev:
     image: ruby:3.1.2
     container_name: ruby3-dev
+    
     volumes:
       - "./:/opt/data/"
     working_dir: /opt/data/
+    entrypoint: >
+      sh -c '
+        gem install rufo && \
+          sed -i -e "s/INDENT_SIZE = 2/INDENT_SIZE = 4/g" /usr/local/bundle/gems/rufo-0.13.0/lib/rufo/formatter.rb && \
+          irb
+      '
     tty: true
+
