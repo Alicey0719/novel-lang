@@ -26,7 +26,8 @@ class NovelLang
         ">" => :greater_than,
         "<" => :less_than,
     }
-    @@KEYS_RE = "[🤔🕑⛄📝「」【】（）><]|……"
+    @@KEYS_RE = "#{@@KEYS.map{|t|Regexp.escape(t[0])}.join('|')}"
+    #@@KEYS_RE = "[🤔🕑⛄📝「」【】（）><]|……"
     @@RETURN_RE = '\n|\r\n'
     @@STR_RE = '[\w\p{Hiragana}\p{Katakana}\p{Han}]+'
     @@CALC_RE = '[\+\-\*\/\(\)]'
@@ -110,16 +111,20 @@ class NovelLang
         end
     end
 
+    private def parse()
+        expression()
+    end
+
     ## Exp
     private def expression()
         result = term()
         token = get_token()
-        while token == :add or token == :sub or token == :assignment_L or token == :std_out_L
+        while token == :add or token == :sub # or token == :assignment_L or token == :std_out_L
             result = [token, result, term()]
             token = get_token()
         end
         #unget_token(token)
-        unget_token() unless token == :assignment_R or token == :std_out_R
+        unget_token() # unless token == :assignment_R or token == :std_out_R
 
         p "exp : #{result}" if @debug
         return result
@@ -149,31 +154,27 @@ class NovelLang
             if get_token() != :parn_R # 閉じカッコを取り除く
                 raise NovelLangSyntaxError, "SyntaxError ')'がありません"
             end
-        elsif token == :var_L #変数関係
-            var = get_token()
-            if var =~ /#{@@KEYS_RE}/
-                raise NovelLangSyntaxError, "SyntaxError 変数名が正しく規定されていません"
-            end
+        # elsif token == :var_L #変数関係
+        #     var = get_token()
+        #     if var =~ /#{@@KEYS_RE}/
+        #         raise NovelLangSyntaxError, "SyntaxError 変数名が正しく規定されていません"
+        #     end
 
-            result = [:var, var]
+        #     result = [:var, var]
 
-            if get_token() != :var_R # 閉じカッコを取り除く
-                raise NovelLangSyntaxError, "SyntaxError '】'がありません"
-            end
+        #     if get_token() != :var_R # 閉じカッコを取り除く
+        #         raise NovelLangSyntaxError, "SyntaxError '】'がありません"
+        #     end
         # elsif token == :std_out_L
         #     result = [:std_out_L, expression()]
         #     if get_token() != :std_out_R # 閉じカッコを取り除く
         #         raise NovelLangSyntaxError, "SyntaxError '」'がありません"
         #     end       
         else
-            raise NovelLangSyntaxError, "Syntax error '#{token}'"
+            raise NovelLangSyntaxError, "Syntax error factor: '#{token}'"
         end
         p "fact: #{result}" if @debug
         return result
-    end
-
-    private def parse()
-        expression()
     end
 
     #-- util --

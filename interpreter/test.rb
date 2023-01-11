@@ -16,7 +16,8 @@ KEYS = {
         '<' => :less_than,
     }
 
-KEYS_RE = '[🤔🕑⛄📝「」【】（）><]|……'
+#KEYS_RE = '[🤔🕑⛄📝「」【】（）><]|……'
+KEYS_RE = "#{KEYS.map{|t|Regexp.escape(t[0])}.join('|')}"
 RETURN_RE = '\n|\r\n'
 GEN_RE = '[\w\p{Hiragana}\p{Katakana}\p{Han}]+'
 CALC_RE = '[\+\-\*\/\(\)]'
