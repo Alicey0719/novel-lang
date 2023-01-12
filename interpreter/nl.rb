@@ -1,5 +1,6 @@
 require "strscan"
 require "optparse"
+require 'pp'
 
 class NovelLangSyntaxError < StandardError
 end
@@ -60,9 +61,12 @@ class NovelLang
         p text if @debug
 
         @sc = StringScanner.new(text)
-
         code_array = parse()
-        p code_array if @debug
+
+        print "\n" if @debug
+        pp code_array if @debug
+        print "\n" if @debug
+
         eval(code_array)
         
         #ans = "%.15g" % ans #表示の整形わよ
