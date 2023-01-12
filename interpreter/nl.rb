@@ -85,13 +85,36 @@ class NovelLang
         elsif ret = assignment()
             p "Sentence Assignment: [#{ret}]" if @debug
             return ret
-        # eisif ret = 
-        # elsif ret = looper()
-        #     p ret if @debug
-        #     return ret
+        elsif ret = std_out()
+            p "Sentence STD_OUT: [#{ret}]" if @debug
+            return ret
         else
             raise NovelLangSyntaxError, "Sentence Error: [#{ret}] 該当するSentenceがありません"
         end
+    end
+
+    private def std_out()
+        result = [:std_out]
+        unless get_token() == :std_out_L
+            unget_token()
+            return nil
+            #raise NovelLangSyntaxError, "AssignmentError: not found '【' "
+        end
+
+        # ret = get_token() #Stringか数値が帰ってくるはず        
+        # unless ret.instance_of?(String) || ret.is_a?(Numeric)
+        #     raise NovelLangSyntaxError, "STD_OUT Error: VarError[#{ret}]"
+        # end
+        unless ret = expression()
+            raise NovelLangSyntaxError, "AssignmentError: not found [Expression]"
+        end
+        result.push(ret)
+
+        unless get_token() == :std_out_R
+            raise NovelLangSyntaxError, "STD_OUT Error: not found '」' "
+        end
+
+        return result
     end
 
     private def eop()
@@ -144,7 +167,11 @@ class NovelLang
             if exp.instance_of?(Array)
             case exp[0]
             when :block
-                return eval(exp[1])
+                exp.shift
+                while b = exp.shift do
+                    p "!!block!! #{b}" if @debug
+                    eval(b)
+                end
             when :add
                 return eval(exp[1]) + eval(exp[2])
             when :sub
@@ -158,7 +185,8 @@ class NovelLang
                 #p "a  #{exp}"
                 return @nl_var_hash[eval(exp[1][1])] = eval(exp[2])
             when :var
-                return @nl_var_hash[exp[2]]
+                #p "var-eval #{exp} #{@nl_var_hash[exp[1]]}"
+                return @nl_var_hash[exp[1]]
             when :std_out
                 print "#{eval(exp[1])}\n"
             end
@@ -210,22 +238,17 @@ class NovelLang
             if get_token() != :parn_R # 閉じカッコを取り除く
                 raise NovelLangSyntaxError, "SyntaxError ')'がありません"
             end
-            # elsif token == :var_L #変数関係
-            #     var = get_token()
-            #     if var =~ /#{@@KEYS_RE}/
-            #         raise NovelLangSyntaxError, "SyntaxError 変数名が正しく規定されていません"
-            #     end
+        elsif token == :var_L #変数関係
+            var = get_token()
+            if var =~ /#{@@KEYS_RE}|#{@@RETURN_RE}|#{@@CALC_RE}/
+                raise NovelLangSyntaxError, "SyntaxError 変数名が正しく規定されていません"
+            end
 
-            #     result = [:var, var]
+            result = [:var, var]           
 
-            #     if get_token() != :var_R # 閉じカッコを取り除く
-            #         raise NovelLangSyntaxError, "SyntaxError '】'がありません"
-            #     end
-            # elsif token == :std_out_L
-            #     result = [:std_out_L, expression()]
-            #     if get_token() != :std_out_R # 閉じカッコを取り除く
-            #         raise NovelLangSyntaxError, "SyntaxError '」'がありません"
-            #     end
+            if get_token() != :var_R # 閉じカッコを取り除く
+                raise NovelLangSyntaxError, "SyntaxError '】'がありません"
+            end
         else
             raise NovelLangSyntaxError, "Syntax error factor: '#{token}'"
         end
