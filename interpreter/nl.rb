@@ -13,7 +13,7 @@ class NovelLang
         "/" => :div,
         "(" => :parn_L,
         ")" => :parn_R,
-        "🤔" => :if,
+        "🤔" => :branch,
         "🕑" => :loop,
         "⛄" => :calc,
         "📝" => :std_in,
@@ -92,9 +92,43 @@ class NovelLang
         elsif ret = std_out()
             p "Sentence STD_OUT: [#{ret}]" if @debug
             return ret
+        elsif ret = branch()
+            p "Sentence branch: [#{ret}]" if @debug
+            return ret
         else
             raise NovelLangSyntaxError, "Sentence Error: [#{ret}] 該当するSentenceがありません"
         end
+    end
+
+    private def branch()
+        result = [:branch]
+        unless get_token() == :branch
+            unget_token()
+            return nil
+            #raise NovelLangSyntaxError, "AssignmentError: not found '【' "
+        end
+        unless ret = expression() #条件式
+            raise NovelLangSyntaxError, "branch Error: not found [Expression]"
+        end
+        result.push(ret)
+
+        unless get_token() == :section
+            raise NovelLangSyntaxError, "branch Error: not found '……' "
+        end
+
+        unless ret = sentence() #真のとき
+            #raise NovelLangSyntaxError, "branch Error: not found []"
+        end
+        result.push(ret)
+
+        unless get_token() == :section
+            raise NovelLangSyntaxError, "branch Error: not found '……' "
+        end
+
+        unless ret = sentence() #偽のとき
+            #raise NovelLangSyntaxError, "branch Error: not found []"
+        end
+        result.push(ret)
     end
 
     private def std_out()
@@ -110,7 +144,7 @@ class NovelLang
         #     raise NovelLangSyntaxError, "STD_OUT Error: VarError[#{ret}]"
         # end
         unless ret = expression()
-            raise NovelLangSyntaxError, "AssignmentError: not found [Expression]"
+            raise NovelLangSyntaxError, "STD_OUT Error: not found [Expression]"
         end
         result.push(ret)
 
@@ -193,6 +227,13 @@ class NovelLang
                 return @nl_var_hash[exp[1]]
             when :std_out
                 print "#{eval(exp[1])}\n"
+            when :branch
+                f = eval(exp[1]).to_i
+                if f.positive? then
+                    return eval(exp[2])
+                else
+                    return eval(exp[3])
+                end
             end
         else
             return exp
