@@ -95,10 +95,36 @@ class NovelLang
         elsif ret = branch()
             p "Sentence branch: [#{ret}]" if @debug
             return ret
+        elsif ret = loopers()
+            p "Sentence loopers: [#{ret}]" if @debug
+            return ret
         else
             raise NovelLangSyntaxError, "Sentence Error: [#{ret}] 該当するSentenceがありません"
         end
     end
+
+    private def loopers()
+        result = [:loop]
+        unless get_token() == :loop
+            unget_token()
+            return nil
+            #raise NovelLangSyntaxError, "AssignmentError: not found '【' "
+        end
+
+        unless ret = expression() #条件式
+            raise NovelLangSyntaxError, "branch Error: not found [Expression]"
+        end
+        result.push(ret)
+
+        unless get_token() == :section
+            raise NovelLangSyntaxError, "branch Error: not found '……' "
+        end
+
+        unless ret = sentence() #ループ内容
+            #raise NovelLangSyntaxError, "branch Error: not found []"
+        end
+        result.push(ret)
+    end    
 
     private def branch()
         result = [:branch]
@@ -234,6 +260,15 @@ class NovelLang
                 else
                     return eval(exp[3])
                 end
+            when :loop
+                while true do
+                    f = eval(exp[1]).to_i
+                    unless f.positive? then
+                        break
+                    end
+                    eval(exp[2])
+                end
+                return true
             end
         else
             return exp
