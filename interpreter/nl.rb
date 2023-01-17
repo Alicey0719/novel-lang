@@ -198,7 +198,7 @@ class NovelLang
             #raise NovelLangSyntaxError, "AssignmentError: not found '【' "
         end
 
-        ret = get_token() #Stringが帰ってくるはず
+        ret = get_token() #String(変数名)が帰ってくるはず
         unless ret.instance_of?(String)
             raise NovelLangSyntaxError, "AssignmentError: VarError[#{ret}]"
         end
@@ -214,9 +214,14 @@ class NovelLang
             #raise NovelLangSyntaxError, "AssignmentError: not found '（' "
         end
 
-        unless ret = expression()
-            raise NovelLangSyntaxError, "AssignmentError: not found [Expression]"
-        end
+        ret = get_token()
+        unless ret == :std_in then #std_inか式が代入されるはず
+            unget_token()
+
+            unless ret = expression()
+                raise NovelLangSyntaxError, "AssignmentError: not found [Expression]"
+            end
+        end   
         result.push(ret)
 
         unless get_token() == :assignment_R
@@ -270,6 +275,8 @@ class NovelLang
                 end
                 return true
             end
+        elsif exp == :std_in
+            return STDIN.gets
         else
             return exp
         end
