@@ -15,7 +15,7 @@ class NovelLang
         ")" => :parn_R,
         "🤔" => :branch,
         "🕑" => :loop,
-        "⛄" => :calc,
+        "⛄" => :string,
         "📝" => :std_in,
         "「" => :std_out_L,
         "」" => :std_out_R,
@@ -112,16 +112,16 @@ class NovelLang
         end
 
         unless ret = expression() #条件式
-            raise NovelLangSyntaxError, "branch Error: not found [Expression]"
+            raise NovelLangSyntaxError, "loop Error: not found [Expression]"
         end
         result.push(ret)
 
         unless get_token() == :section
-            raise NovelLangSyntaxError, "branch Error: not found '……' "
+            raise NovelLangSyntaxError, "loop Error: not found '……' "
         end
 
         unless ret = sentence() #ループ内容
-            #raise NovelLangSyntaxError, "branch Error: not found []"
+            #raise NovelLangSyntaxError, "loop Error: not found []"
         end
         result.push(ret)
     end    
@@ -215,13 +215,16 @@ class NovelLang
         end
 
         ret = get_token()
-        unless ret == :std_in then #std_inか式が代入されるはず
-            unget_token()
-
+        #std_in(何もしない)か式か文字列が代入されるはず
+        if ret == :string then #文字列
+            ret = get_token()
+            raise NovelLangSyntaxError, "AssignmentError: not found [⛄]" unless get_token() == :string
+        elsif ret != :std_in then #式のときの処理
+            unget_token() #expでget_tokenするため一旦ungetする
             unless ret = expression()
                 raise NovelLangSyntaxError, "AssignmentError: not found [Expression]"
             end
-        end   
+        end
         result.push(ret)
 
         unless get_token() == :assignment_R
@@ -242,22 +245,40 @@ class NovelLang
                     eval(b)
                 end
             when :add
-                return eval(exp[1]) + eval(exp[2])
+                # addは文字列加算OK
+                begin
+                    return eval(exp[1]) + eval(exp[2])
+                rescue TypeError => e
+                    return eval(exp[1]).to_s + eval(exp[2]).to_s
+                end
             when :sub
-                return eval(exp[1]) - eval(exp[2])
+                tmp1 = eval(exp[1])
+                str_is_exception(tmp1)
+                tmp2 = eval(exp[2])
+                str_is_exception(tmp2)
+                return tmp1 - tmp2
             when :mul
-                return eval(exp[1]) * eval(exp[2])
+                tmp1 = eval(exp[1])
+                str_is_exception(tmp1)
+                tmp2 = eval(exp[2])
+                str_is_exception(tmp2)
+                return tmp1 * tmp2
             when :div
-                raise NovelLangSyntaxError, "Division by zero error" if exp[2] == 0 #ゼロ除算エラーわよ
-                return eval(exp[1]) / eval(exp[2])
+                tmp1 = eval(exp[1])
+                str_is_exception(tmp1)
+                tmp2 = eval(exp[2])
+                str_is_exception(tmp2)
+                raise NovelLangSyntaxError, "Division by zero error" if tmp2 == 0 #ゼロ除算エラーわよ
+                return tmp1 / tmp2
             when :assignment
                 #p "a  #{exp}"
                 return @nl_var_hash[eval(exp[1][1])] = eval(exp[2])
             when :var
                 #p "var-eval #{exp} #{@nl_var_hash[exp[1]]}"
                 return @nl_var_hash[exp[1]]
-            when :std_out
+            when :std_out                
                 print "#{eval(exp[1])}\n"
+                p "#{eval(exp[1]).class}" if @debug
             when :branch
                 f = eval(exp[1]).to_i
                 if f.positive? then
@@ -276,7 +297,12 @@ class NovelLang
                 return true
             end
         elsif exp == :std_in
-            return STDIN.gets
+            tmp = STDIN.gets.chomp
+            if is_number?(tmp)
+                return tmp.to_f if tmp =~ /\A[0-9]+\.[0-9]+\z/
+                return tmp.to_i
+            end
+            return tmp
         else
             return exp
         end
@@ -319,7 +345,9 @@ class NovelLang
     private def factor()
         token = get_token()
         if token =~ /\d+/ #トークンがリテラルか
-            result = token.to_f() #リテラル
+            #リテラル
+            result = token.to_i
+            result = token.to_f if token =~ /\A[0-9]+\.[0-9]+\z/ 
         elsif token == :parn_L
             result = expression()
             if get_token() != :parn_R # 閉じカッコを取り除く
@@ -377,6 +405,18 @@ class NovelLang
             #p @sc
         end
         p "unget_token" if @debug
+    end
+
+    # 文字列が数字のみならTrue
+    private def is_number?(str)
+        nil != (str =~ /\A[0-9.]+\z/)
+    end
+
+    # stringがきたらexception
+    private def str_is_exception(a)
+        if a.is_a?(String)
+            raise NovelLangSyntaxError, "Unexpected type error: string "
+        end 
     end
 
     # read file2txt
