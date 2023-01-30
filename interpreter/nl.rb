@@ -50,14 +50,12 @@ class NovelLang
 
         # running
         code = read_file(ARGV[0])
-        run(code)
-        p @nl_var_hash if @debug
+        run(code)        
     end
 
     private def run(text)
         p text if @debug
 
-        # text = text.gsub(/[^\d\+\-\*\/\(\)]/, "") #数字と演算子以外の文字削除わよ
         text = text.gsub(/[\r\n]/, "")
         p text if @debug
 
@@ -69,9 +67,7 @@ class NovelLang
         print "\n" if @debug
 
         eval(code_array)
-        
-        #ans = "%.15g" % ans #表示の整形わよ
-        # print "#{ans}\n"
+        p @nl_var_hash if @debug
         return
     end
 
@@ -166,10 +162,6 @@ class NovelLang
             #raise NovelLangSyntaxError, "AssignmentError: not found '【' "
         end
 
-        # ret = get_token() #Stringか数値が帰ってくるはず        
-        # unless ret.instance_of?(String) || ret.is_a?(Numeric)
-        #     raise NovelLangSyntaxError, "STD_OUT Error: VarError[#{ret}]"
-        # end
         unless ret = expression()
             raise NovelLangSyntaxError, "STD_OUT Error: not found [Expression]"
         end
@@ -321,8 +313,8 @@ class NovelLang
             result = [token, result, term()]
             token = get_token()
         end
-        #unget_token(token)
-        unget_token() # unless token == :assignment_R or token == :std_out_R
+        
+        unget_token() 
 
         p "exp : #{result}" if @debug
         return result
@@ -336,7 +328,7 @@ class NovelLang
             result = [token, result, factor()]
             token = get_token()
         end
-        #unget_token(token)
+        
         unget_token()
         p "term: #{result}" if @debug
         return result
