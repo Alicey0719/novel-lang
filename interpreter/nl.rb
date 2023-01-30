@@ -166,9 +166,15 @@ class NovelLang
             #raise NovelLangSyntaxError, "AssignmentError: not found '【' "
         end
 
-        unless ret = expression()
+        if get_token() == :string #str
+            ret = get_token()
+            raise NovelLangSyntaxError, "AssignmentError: not found [⛄]" unless get_token() == :string
+        else #exp
+            unget_token() #expでget_token行うため
+            unless ret = expression()
             raise NovelLangSyntaxError, "STD_OUT Error: not found [Expression]"
-        end
+            end
+        end        
         result.push(ret)
 
         unless get_token() == :std_out_R
