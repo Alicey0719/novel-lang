@@ -33,6 +33,7 @@ class NovelLang
     @@STR_RE = '[\w\p{Hiragana}\p{Katakana}\p{Han}]+'
     @@CALC_RE = '[\+\-\*\/\(\)]'
     @@EOP_RE = '\A\s*\z'
+    @@FLOAT_STR = '\A[0-9]+\.[0-9]+\z'
 
     @@TOKEN_RE = "#{@@RETURN_RE}|#{@@KEYS_RE}|#{@@STR_RE}"
 
@@ -299,7 +300,7 @@ class NovelLang
         elsif exp == :std_in
             tmp = STDIN.gets.chomp
             if is_number?(tmp)
-                return tmp.to_f if tmp =~ /\A[0-9]+\.[0-9]+\z/
+                return tmp.to_f if tmp =~ /#{@@FLOAT_STR}/
                 return tmp.to_i
             end
             return tmp
@@ -347,7 +348,7 @@ class NovelLang
         if token =~ /\d+/ #トークンがリテラルか
             #リテラル
             result = token.to_i
-            result = token.to_f if token =~ /\A[0-9]+\.[0-9]+\z/ 
+            result = token.to_f if token =~ /#{@@FLOAT_STR}/ 
         elsif token == :parn_L
             result = expression()
             if get_token() != :parn_R # 閉じカッコを取り除く
