@@ -26,6 +26,7 @@ class NovelLang
         "……" => :section,
         ">" => :greater_than,
         "<" => :less_than,
+        "Ex-iT" => :exit,
     }
     @@KEYS_RE = "#{@@KEYS.map { |t| Regexp.escape(t[0]) }.join("|")}"
     #@@KEYS_RE = "[🤔🕑⛄📝「」【】（）><]|……"
@@ -94,6 +95,9 @@ class NovelLang
             return ret
         elsif ret = loopers()
             p "Sentence loopers: [#{ret}]" if @debug
+            return ret
+        elsif ret = ex_it()
+            p "Sentence ex-it: [#{ret}]" if @debug
             return ret
         else
             raise NovelLangSyntaxError, "Sentence Error: [#{ret}] 該当するSentenceがありません"
@@ -181,6 +185,15 @@ class NovelLang
             #raise NovelLangSyntaxError, "AssignmentError: not found '【' "
         end
         return :eop
+    end
+
+    private def ex_it()
+        unless get_token() == :exit
+            unget_token()
+            return nil
+            #raise NovelLangSyntaxError, "AssignmentError: not found '【' "
+        end
+        return :exit
     end
 
     private def assignment()
@@ -296,6 +309,8 @@ class NovelLang
                 return tmp.to_i
             end
             return tmp
+        elsif exp == :exit
+            escape(0)
         else
             return exp
         end
