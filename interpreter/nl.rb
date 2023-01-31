@@ -31,7 +31,7 @@ class NovelLang
     @@KEYS_RE = "#{@@KEYS.map { |t| Regexp.escape(t[0]) }.join("|")}"
     #@@KEYS_RE = "[🤔🕑⛄📝「」【】（）><]|……"
     @@RETURN_RE = '\n|\r\n'
-    @@STR_RE = '[\w\p{Hiragana}\p{Katakana}\p{Han}]+'
+    @@STR_RE = '[\w\p{Hiragana}\p{Katakana}\p{Han}\s]+'
     @@CALC_RE = '[\+\-\*\/\(\)]'
     @@EOP_RE = '\A\s*\z'
     @@FLOAT_STR = '\A[0-9]+\.[0-9]+\z'
@@ -168,7 +168,18 @@ class NovelLang
 
         if get_token() == :string #str
             ret = get_token()
-            raise NovelLangSyntaxError, "AssignmentError: not found [⛄]" unless get_token() == :string
+            while true
+                tmp = get_token()
+                if tmp == :string then
+                    break
+                elsif tmp == nil
+                    raise NovelLangSyntaxError, "AssignmentError: not found [⛄]"
+                else
+                    ret = ret + tmp.to_s
+                end
+                p ret
+            end
+            
         else #exp
             unget_token() #expでget_token行うため
             unless ret = expression()
