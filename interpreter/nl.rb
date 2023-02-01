@@ -24,8 +24,8 @@ class NovelLang
         "（" => :assignment_L,
         "）" => :assignment_R,
         "……" => :section,
-        ">" => :greater_than,
-        "<" => :less_than,
+        ">" => :greater_than,   #未実装
+        "<" => :less_than,      #未実装
         "Ex-iT" => :exit,
     }
     @@KEYS_RE = "#{@@KEYS.map { |t| Regexp.escape(t[0]) }.join("|")}"
